@@ -4,68 +4,84 @@ import time
 import sys
 import random
 
-number_of_philosophers = sys.argv[0]
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 class Philosopher:
-    def __init__(self, id, his_left_fork, his_right_fork):
+    def __init__(self, id, left_fork, right_fork):
         self.id = id
-        self.his_left_fork = his_left_fork
-        self.his_right_fork = his_right_fork
+        self.left_fork = left_fork
+        self.right_fork = right_fork
     
     def thinking(self):
+        logging.info(f"Philosopher {self.id} is thinking")
         time.sleep(random.uniform(1, 5))
-        logging("Philosopher %d is thinking", id)
     
     def eating(self):
-        logging("Philosopher %d is eating", id)
+        logging.info(f"Philosopher {self.id} is eating")
         time.sleep(random.uniform(1, 5))
 
-
     def pick_up_forks(self):
-        if not self.his_left_fork.locked() and not self.his_right_fork.locked():
-            logging(f"Philosopher can try picking forks, because both of his left and right are available!")
-        
-        if self.id % 2 == 0:
-            self.his_left_fork.acquire()
-            logging(f"Philosopher {self.id} is picking up his left fork")
-            time.sleep(random.uniform(1, 2))
-
-            self.his_right_fork.acquire()
-            logging(f"Philosopher {self.id} is picking up his left fork")
-            time.sleep(random.uniform(1, 2))
-               
+        if self.id % 2 == 0: 
+            logging.info(f"Philosopher {self.id} is trying to pick up left fork")
+            self.left_fork.acquire()
+            logging.info(f"Philosopher {self.id} picked up left fork")
+            time.sleep(random.uniform(0.1, 0.5)) 
             
-        else:
-            self.his_right_fork.acquire()
-            logging(f"Philosopher {self.id} is picking up his right fork")
-            time.sleep(random.uniform(1, 2))
-
-            self.his_left_fork.acquire()
-            logging(f"Philosopher {self.id} is picking up his left fork")
-            time.sleep(random.uniform(1, 2))  
-
-        logging("Philosopher %d picked up forks", id)   
-
+            logging.info(f"Philosopher {self.id} is trying to pick up right fork")
+            self.right_fork.acquire()
+            logging.info(f"Philosopher {self.id} picked up right fork")
+        else: 
+            logging.info(f"Philosopher {self.id} is trying to pick up right fork")
+            self.right_fork.acquire()
+            logging.info(f"Philosopher {self.id} picked up right fork")
+            time.sleep(random.uniform(0.1, 0.5))  
+            
+            logging.info(f"Philosopher {self.id} is trying to pick up left fork")
+            self.left_fork.acquire()
+            logging.info(f"Philosopher {self.id} picked up left fork")
+    
     def put_back_forks(self):
-        logging("Philosopher %d is putting back forks", id)
-        self.his_left_fork.release()
-        self.his_right_fork.release()
+        if self.id % 2 == 0: 
+            self.right_fork.release()
+            logging.info(f"Philosopher {self.id} put down right fork")
+            self.left_fork.release()
+            logging.info(f"Philosopher {self.id} put down left fork")
+        else: 
+            self.left_fork.release()
+            logging.info(f"Philosopher {self.id} put down left fork")
+            self.right_fork.release()
+            logging.info(f"Philosopher {self.id} put down right fork")
+        logging.info(f"Philosopher {self.id} has put back both forks")
 
+    def run(self):
+        while True:  
+            self.thinking()
+            self.pick_up_forks()
+            self.eating()
+            self.put_back_forks()
 
 if __name__ == "__main__":
-    print(f"Executing script: {sys.argv[0]}")
-
     if len(sys.argv) < 2:
-        print("You must pass number of philosophers!")
-        exit
+        print("Add number of philosophers to check")
+        sys.exit(1)
+
+    number_of_philosophers = int(sys.argv[1])
     forks = []
     philosophers = []
 
-    for philosopher in range(number_of_philosophers):
+    for i in range(number_of_philosophers):
         forks.append(threading.Lock())
-    
-    for philosopher in range(number_of_philosophers):
-        philosophers.append(Philosopher(philosopher, forks[philosopher], forks[(philosopher + 1) % number_of_philosophers]))
 
-    print("Hello")
+    for i in range(number_of_philosophers):
+        philosophers.append(Philosopher(i, forks[i], forks[(i + 1) % number_of_philosophers]))
 
+    philosopher_threads = []
+    for philosopher in philosophers:
+        t = threading.Thread(target=philosopher.run)
+        t.start()
+        philosopher_threads.append(t)
+
+    for t in philosopher_threads:
+        t.join()
+    print("Simulation complete!")
+  
